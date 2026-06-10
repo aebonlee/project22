@@ -77,6 +77,15 @@ const M: Meta = {
   ],
   deploy:
     'Vite 빌드(base: "./") 후 GitHub Actions(deploy.yml)가 main push 시 GitHub Pages로 자동 배포 → aebonlee.github.io/project22/',
+  scope: {
+    include: ['수입·지출·부채 입력 → 재무 진단·자립 단계', '단계별 목표·할 일·AI 코칭(선택)', '규칙 모델 + AI 보조'],
+    exclude: ['은행·자산 연동', '실제 투자·상품 추천', '세무·법률 자문'],
+  },
+  pitch: [
+    '"순서"가 중요한 돈 관리를 비상금→부채→저축→투자로 코칭',
+    '저축률이 자립 속도를 결정한다는 핵심 메시지',
+    '진단·단계는 규칙으로, 코칭 멘트만 AI',
+  ],
   stack: ['React 18', 'TypeScript', 'Vite', '규칙기반 모델', 'OpenAI(선택)'],
 };
 
