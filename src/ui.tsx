@@ -10,18 +10,35 @@ export function useLocalStorage<T>(key: string, initial: T): [T, (v: T | ((p: T)
   return [val, setVal];
 }
 
-/** 프로젝트 메타 — 기능 + 포트폴리오 정보 콘텐츠 */
+/** 프로젝트 메타 — 기능(앱) + 포트폴리오 콘텐츠(기획·파이프라인·개발 참고·팀) */
 export interface Meta {
+  // ── 식별/히어로 ──
   id: number; icon: string; title: string; tagline: string; members: string[]; color: string; note?: string;
   ai?: boolean;                                      // OpenAI 사용 앱이면 키 입력 바 표시
+
+  // ── 📋 기획 ──
   problem: string;                                   // 문제/배경
+  targets?: string[];                                // 타깃 사용자
+  goals?: string[];                                  // 기획 목표/성공 기준
+  scenarios?: string[];                              // 사용 시나리오
+  screens?: { name: string; desc: string }[];        // 주요 화면/플로우
   features: { icon: string; title: string; desc: string }[];
   howto: string[];                                   // 사용 방법
   facts: { value: string; label: string }[];         // 도메인 통계
   info: { title: string; body: string }[];           // 도메인 지식 카드
-  pipeline?: string[];                                // AI/데이터 처리 흐름(단계)
-  techNotes?: { title: string; body: string }[];      // 기술 설계 노트
+
+  // ── 🔧 파이프라인 ──
+  pipeline?: string[];                                // 처리 흐름(단계 요약)
+  pipelineDetail?: { step: string; detail: string }[]; // 단계별 상세
+  promptNotes?: string[];                             // 프롬프트/응답 설계 메모(AI 앱)
+
+  // ── 🛠 개발 참고 ──
   stack: string[];                                   // 기술 스택
+  architecture?: string;                             // 아키텍처 개요(1문단)
+  structure?: { path: string; desc: string }[];      // 폴더/파일 구조
+  dataModel?: { name: string; desc: string }[];      // 상태/데이터 모델
+  techNotes?: { title: string; body: string }[];      // 기술 설계 노트
+  deploy?: string;                                   // 빌드/배포 메모
   links?: { label: string; url: string }[];          // 참고 링크
 }
 
@@ -49,17 +66,29 @@ export const Hero = ({ m }: { m: Meta }) => (
   </header>
 );
 
-export type TabKey = 'app' | 'info' | 'team';
+export type TabKey = 'app' | 'plan' | 'pipeline' | 'dev' | 'team';
 export const Tabs = ({ tab, set, color }: { tab: TabKey; set: (t: TabKey) => void; color: string }) => (
   <nav className="tabs">
-    {([['app', '🚀 앱 실행'], ['info', '📚 프로젝트 정보'], ['team', '👥 팀']] as [TabKey, string][]).map(([k, l]) => (
+    {([['app', '🚀 앱 실행'], ['plan', '📋 기획'], ['pipeline', '🔧 파이프라인'], ['dev', '🛠 개발 참고'], ['team', '👥 팀']] as [TabKey, string][]).map(([k, l]) => (
       <button key={k} className={`tab ${tab === k ? 'on' : ''}`} style={tab === k ? { background: color } : undefined} onClick={() => set(k)}>{l}</button>
     ))}
   </nav>
 );
 
-/** 정보 탭 — 문제·기능·통계·도메인 지식·링크 */
-export const InfoTab = ({ m }: { m: Meta }) => (
+/** 번호 매긴 박스 리스트(목표·시나리오·사용법 공통) */
+const NumList = ({ items, color }: { items: string[]; color: string }) => (
+  <Stack gap={8}>
+    {items.map((s, i) => (
+      <div key={i} className="box" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: '50%', background: color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13 }}>{i + 1}</span>
+        <span style={{ fontSize: 14.5 }}>{s}</span>
+      </div>
+    ))}
+  </Stack>
+);
+
+/** 📋 기획 탭 — 문제·타깃·목표·시나리오·화면·기능·도메인·사용법 */
+export const PlanningTab = ({ m }: { m: Meta }) => (
   <Stack gap={22}>
     <div className="callout" style={{ background: `${m.color}12`, border: `1px solid ${m.color}33` }}>
       <span style={{ fontSize: 22 }}>🎯</span>
@@ -70,6 +99,39 @@ export const InfoTab = ({ m }: { m: Meta }) => (
       <div className="statband">{m.facts.map((f, i) => <div key={i} className="stat"><b style={{ color: m.color }}>{f.value}</b><span>{f.label}</span></div>)}</div>
     )}
 
+    {m.targets && m.targets.length > 0 && (
+      <div>
+        <div className="seclabel" style={{ color: m.color }}>타깃 사용자</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>{m.targets.map((t) => <Pill key={t} color={m.color}>{t}</Pill>)}</div>
+      </div>
+    )}
+
+    {m.goals && m.goals.length > 0 && (
+      <div>
+        <div className="seclabel" style={{ color: m.color }}>기획 목표</div>
+        <h3 className="sechead">무엇을 이루려는가</h3>
+        <div style={{ marginTop: 12 }}><NumList items={m.goals} color={m.color} /></div>
+      </div>
+    )}
+
+    {m.scenarios && m.scenarios.length > 0 && (
+      <div>
+        <div className="seclabel" style={{ color: m.color }}>사용 시나리오</div>
+        <h3 className="sechead">이렇게 쓰입니다</h3>
+        <div style={{ marginTop: 12 }}><NumList items={m.scenarios} color={m.color} /></div>
+      </div>
+    )}
+
+    {m.screens && m.screens.length > 0 && (
+      <div>
+        <div className="seclabel" style={{ color: m.color }}>화면 구성</div>
+        <h3 className="sechead">주요 화면 · 플로우</h3>
+        <div className="feat-grid" style={{ marginTop: 12 }}>
+          {m.screens.map((s, i) => <div key={i} className="infocard"><h4 style={{ color: m.color }}>{s.name}</h4><p>{s.desc}</p></div>)}
+        </div>
+      </div>
+    )}
+
     <div>
       <div className="seclabel" style={{ color: m.color }}>주요 기능</div>
       <h3 className="sechead">이 앱이 제공하는 것</h3>
@@ -78,18 +140,6 @@ export const InfoTab = ({ m }: { m: Meta }) => (
       </div>
     </div>
 
-    {m.pipeline && m.pipeline.length > 0 && (
-      <div>
-        <div className="seclabel" style={{ color: m.color }}>동작 원리</div>
-        <h3 className="sechead">AI 처리 파이프라인</h3>
-        <ol className="pipeline">
-          {m.pipeline.map((s, i) => (
-            <li key={i}><span className="pl-no" style={{ background: m.color }}>{i + 1}</span><span>{s}</span></li>
-          ))}
-        </ol>
-      </div>
-    )}
-
     {m.info.length > 0 && (
       <div>
         <div className="seclabel" style={{ color: m.color }}>알아두면 좋은 정보</div>
@@ -97,6 +147,95 @@ export const InfoTab = ({ m }: { m: Meta }) => (
         <Stack gap={10}>{m.info.map((c, i) => <div key={i} className="infocard"><h4 style={{ color: m.color }}>{c.title}</h4><p>{c.body}</p></div>)}</Stack>
       </div>
     )}
+
+    <div>
+      <div className="seclabel" style={{ color: m.color }}>사용 방법</div>
+      <h3 className="sechead">시작하기</h3>
+      <div style={{ marginTop: 12 }}><NumList items={m.howto} color={m.color} /></div>
+    </div>
+  </Stack>
+);
+
+/** 🔧 파이프라인 탭 — 처리 흐름 + (AI) 프롬프트 설계 */
+export const PipelineTab = ({ m }: { m: Meta }) => {
+  const detail = m.pipelineDetail && m.pipelineDetail.length > 0 ? m.pipelineDetail : null;
+  const steps = m.pipeline && m.pipeline.length > 0 ? m.pipeline : null;
+  return (
+    <Stack gap={22}>
+      <div>
+        <div className="seclabel" style={{ color: m.color }}>동작 원리</div>
+        <h3 className="sechead">처리 파이프라인</h3>
+        {detail ? (
+          <ol className="pipeline" style={{ marginTop: 12 }}>
+            {detail.map((s, i) => (
+              <li key={i}><span className="pl-no" style={{ background: m.color }}>{i + 1}</span><span><b>{s.step}</b><span style={{ display: 'block', fontSize: 13, color: 'var(--sub)', marginTop: 3 }}>{s.detail}</span></span></li>
+            ))}
+          </ol>
+        ) : steps ? (
+          <ol className="pipeline" style={{ marginTop: 12 }}>{steps.map((s, i) => <li key={i}><span className="pl-no" style={{ background: m.color }}>{i + 1}</span><span>{s}</span></li>)}</ol>
+        ) : (
+          <div className="box" style={{ marginTop: 12 }}><p style={{ margin: 0, fontSize: 14, color: 'var(--sub)' }}>별도 서버 없이 브라우저 클라이언트에서 모든 처리가 이뤄집니다(정적 배포).</p></div>
+        )}
+      </div>
+
+      {m.promptNotes && m.promptNotes.length > 0 && (
+        <div>
+          <div className="seclabel" style={{ color: m.color }}>AI 설계</div>
+          <h3 className="sechead">프롬프트 · 응답 설계</h3>
+          <Stack gap={8}>
+            {m.promptNotes.map((s, i) => (
+              <div key={i} className="box" style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <span style={{ color: m.color, fontWeight: 800 }}>›</span><span style={{ fontSize: 14, lineHeight: 1.6 }}>{s}</span>
+              </div>
+            ))}
+          </Stack>
+        </div>
+      )}
+    </Stack>
+  );
+};
+
+/** 🛠 개발 참고 탭 — 아키텍처·파일구조·데이터모델·스택·기술노트·배포·링크 */
+export const DevTab = ({ m }: { m: Meta }) => (
+  <Stack gap={22}>
+    {m.architecture && (
+      <div className="callout" style={{ background: `${m.color}12`, border: `1px solid ${m.color}33` }}>
+        <span style={{ fontSize: 22 }}>🧱</span>
+        <div><div className="seclabel" style={{ color: m.color }}>아키텍처 개요</div><p style={{ margin: '4px 0 0', fontSize: 14.5, lineHeight: 1.75 }}>{m.architecture}</p></div>
+      </div>
+    )}
+
+    {m.structure && m.structure.length > 0 && (
+      <div>
+        <div className="seclabel" style={{ color: m.color }}>파일 구조</div>
+        <h3 className="sechead">폴더 · 파일</h3>
+        <div className="box" style={{ marginTop: 12 }}>
+          <Stack gap={8}>
+            {m.structure.map((s, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                <code style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 700, color: m.color }}>{s.path}</code>
+                <span style={{ fontSize: 13.5, color: 'var(--sub)' }}>{s.desc}</span>
+              </div>
+            ))}
+          </Stack>
+        </div>
+      </div>
+    )}
+
+    {m.dataModel && m.dataModel.length > 0 && (
+      <div>
+        <div className="seclabel" style={{ color: m.color }}>데이터 모델</div>
+        <h3 className="sechead">상태 · 타입</h3>
+        <div className="feat-grid" style={{ marginTop: 12 }}>
+          {m.dataModel.map((d, i) => <div key={i} className="feat"><strong style={{ marginTop: 0 }}>🧩 {d.name}</strong><p>{d.desc}</p></div>)}
+        </div>
+      </div>
+    )}
+
+    <div>
+      <div className="seclabel" style={{ color: m.color }}>기술 스택</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>{m.stack.map((s) => <Pill key={s} color={m.color}>{s}</Pill>)}</div>
+    </div>
 
     {m.techNotes && m.techNotes.length > 0 && (
       <div>
@@ -108,18 +247,12 @@ export const InfoTab = ({ m }: { m: Meta }) => (
       </div>
     )}
 
-    <div>
-      <div className="seclabel" style={{ color: m.color }}>사용 방법</div>
-      <h3 className="sechead">3단계로 시작하기</h3>
-      <Stack gap={8}>
-        {m.howto.map((s, i) => (
-          <div key={i} className="box" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: '50%', background: m.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13 }}>{i + 1}</span>
-            <span style={{ fontSize: 14.5 }}>{s}</span>
-          </div>
-        ))}
-      </Stack>
-    </div>
+    {m.deploy && (
+      <div>
+        <div className="seclabel" style={{ color: m.color }}>빌드 · 배포</div>
+        <div className="box" style={{ marginTop: 10 }}><p style={{ margin: 0, fontSize: 14 }}>{m.deploy}</p></div>
+      </div>
+    )}
 
     {m.links && m.links.length > 0 && (
       <div>
@@ -132,7 +265,7 @@ export const InfoTab = ({ m }: { m: Meta }) => (
   </Stack>
 );
 
-/** 팀 탭 — 멤버·스택·저장소 */
+/** 👥 팀 탭 — 멤버·스택·저장소 */
 export const TeamTab = ({ m }: { m: Meta }) => (
   <Stack gap={22}>
     <div>
@@ -145,12 +278,6 @@ export const TeamTab = ({ m }: { m: Meta }) => (
             <div><strong style={{ margin: 0 }}>{x}</strong><p style={{ margin: 0 }}>팀원</p></div>
           </div>
         ))}
-      </div>
-    </div>
-    <div>
-      <div className="seclabel" style={{ color: m.color }}>기술 스택</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-        {m.stack.map((s) => <Pill key={s} color={m.color}>{s}</Pill>)}
       </div>
     </div>
     <div className="box">
@@ -225,7 +352,7 @@ export const ApiKeyBar = ({ color }: { color: string }) => {
   );
 };
 
-/** 앱 공통 레이아웃: 히어로 + 탭 + 본문 + 푸터 */
+/** 앱 공통 레이아웃: 히어로 + 5탭(앱·기획·파이프라인·개발참고·팀) + 본문 + 푸터 */
 export const AppLayout = ({ m, feature }: { m: Meta; feature: ReactNode }) => {
   const [tab, setTab] = useState<TabKey>('app');
   return (
@@ -233,13 +360,10 @@ export const AppLayout = ({ m, feature }: { m: Meta; feature: ReactNode }) => {
       <Hero m={m} />
       <Tabs tab={tab} set={setTab} color={m.color} />
       <div className="pad" style={{ marginTop: 22 }}>
-        {tab === 'app' && (
-          <Stack>
-            {m.ai && <ApiKeyBar color={m.color} />}
-            {feature}
-          </Stack>
-        )}
-        {tab === 'info' && <InfoTab m={m} />}
+        {tab === 'app' && (<Stack>{m.ai && <ApiKeyBar color={m.color} />}{feature}</Stack>)}
+        {tab === 'plan' && <PlanningTab m={m} />}
+        {tab === 'pipeline' && <PipelineTab m={m} />}
+        {tab === 'dev' && <DevTab m={m} />}
         {tab === 'team' && <TeamTab m={m} />}
       </div>
       <Footer m={m} />
