@@ -66,6 +66,21 @@ const PRESENT_PRINCIPLES: string[] = [
   '숫자·근거로 마무리 — 핵심 기능 1~2개에 집중하고, 확장 계획은 마지막에 한 줄로 언급합니다.',
 ]
 
+// 탭 전환 순서(키보드 ←/→ 이동용)
+const TAB_ORDER: TabKey[] = ['app', 'plan', 'pipeline', 'dev', 'present', 'team'];
+
+// 공통 UX 부스트 스타일(모든 앱 공유) — 스티키 탭·전환 페이드·맨 위로 버튼·읽기 폭
+const UI_BOOST_CSS = `
+.ui-stick{position:sticky;top:0;z-index:30;background:var(--bg);backdrop-filter:saturate(140%) blur(8px);box-shadow:0 1px 0 var(--border)}
+.ui-fade{animation:uiFade .24s ease}
+@keyframes uiFade{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.ui-readable{max-width:880px;margin:0 auto}
+.ui-top{position:fixed;right:18px;bottom:18px;z-index:40;width:44px;height:44px;border:none;border-radius:50%;color:#fff;font-size:20px;font-weight:800;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.22);transition:transform .12s}
+.ui-top:hover{transform:translateY(-2px)}
+.ui-chip{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.22);color:#fff;white-space:nowrap}
+@media (prefers-reduced-motion: reduce){.ui-fade{animation:none}}
+`;
+
 const grad = (c: string) => `linear-gradient(135deg, ${c} 0%, ${shade(c, -22)} 100%)`;
 function shade(hex: string, p: number): string {
   const n = parseInt(hex.replace('#', ''), 16);
@@ -86,6 +101,14 @@ export const Hero = ({ m }: { m: Meta }) => (
       </div>
       <p style={{ marginTop: 8 }}>{m.tagline}</p>
       <div className="phero-mem">{m.members.map((x) => <span key={x}>👤 {x}</span>)}</div>
+      {/* 한눈에 — 메타 요약 칩 */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+        <span className="ui-chip">👥 팀원 {m.members.length}</span>
+        <span className="ui-chip">🧰 스택 {m.stack.length}</span>
+        {m.ai && <span className="ui-chip">🤖 AI 연동</span>}
+        <span className="ui-chip">💾 로컬 저장</span>
+        <span className="ui-chip">🚀 자동 배포</span>
+      </div>
     </div>
   </header>
 );
@@ -447,22 +470,55 @@ export const ApiKeyBar = ({ color }: { color: string }) => {
   );
 };
 
-/** 앱 공통 레이아웃: 히어로 + 5탭(앱·기획·파이프라인·개발참고·팀) + 본문 + 푸터 */
+/** 앱 공통 레이아웃: 히어로 + 6탭 + 본문 + 푸터 (스티키 탭·전환 페이드·맨 위로·키보드 ←/→) */
 export const AppLayout = ({ m, feature }: { m: Meta; feature: ReactNode }) => {
   const [tab, setTab] = useState<TabKey>('app');
+  const [showTop, setShowTop] = useState(false);
+
+  // 스크롤하면 '맨 위로' 버튼 노출
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 360);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // ←/→ 키로 탭 이동(입력 중에는 무시)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && /INPUT|TEXTAREA|SELECT/.test(el.tagName)) return;
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const i = TAB_ORDER.indexOf(tab);
+      setTab(TAB_ORDER[(i + (e.key === 'ArrowRight' ? 1 : TAB_ORDER.length - 1)) % TAB_ORDER.length]);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [tab]);
+
+  const go = (t: TabKey) => { setTab(t); if (window.scrollY > 220) window.scrollTo({ top: 0, behavior: 'smooth' }); };
+
   return (
     <div className="wrap">
+      <style>{UI_BOOST_CSS}</style>
       <Hero m={m} />
-      <Tabs tab={tab} set={setTab} color={m.color} />
+      <div className="ui-stick"><Tabs tab={tab} set={go} color={m.color} /></div>
       <div className="pad" style={{ marginTop: 22 }}>
-        {tab === 'app' && (<Stack>{m.ai && <ApiKeyBar color={m.color} />}{feature}</Stack>)}
-        {tab === 'plan' && <PlanningTab m={m} />}
-        {tab === 'pipeline' && <PipelineTab m={m} />}
-        {tab === 'dev' && <DevTab m={m} />}
-        {tab === 'present' && <PresentTab m={m} />}
-        {tab === 'team' && <TeamTab m={m} />}
+        <div key={tab} className="ui-fade">
+          {tab === 'app'
+            ? <Stack>{m.ai && <ApiKeyBar color={m.color} />}{feature}</Stack>
+            : (
+              <div className="ui-readable">
+                {tab === 'plan' && <PlanningTab m={m} />}
+                {tab === 'pipeline' && <PipelineTab m={m} />}
+                {tab === 'dev' && <DevTab m={m} />}
+                {tab === 'present' && <PresentTab m={m} />}
+                {tab === 'team' && <TeamTab m={m} />}
+              </div>
+            )}
+        </div>
       </div>
       <Footer m={m} />
+      {showTop && <button className="ui-top" style={{ background: m.color }} aria-label="맨 위로" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>↑</button>}
     </div>
   );
 };
